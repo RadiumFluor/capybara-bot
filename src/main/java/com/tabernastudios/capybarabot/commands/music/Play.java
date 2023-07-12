@@ -2,25 +2,19 @@ package com.tabernastudios.capybarabot.commands.music;
 
 import com.jagrosh.jdautilities.command.SlashCommand;
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
-import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.interactions.commands.Command;
-import net.dv8tion.jda.api.interactions.commands.ICommandReference;
-import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
-import java.awt.*;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 public class Play extends SlashCommand {
 
@@ -47,15 +41,19 @@ public class Play extends SlashCommand {
 
     }
 
-    @SuppressWarnings("ConstantConditions")
     @Override
     protected void execute(SlashCommandEvent event) {
+
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
 
         String argument = event.optString("busca");
         String choice = event.optString("plataforma");
 
         if (argument == null) {
-            event.reply("Erro! Você não providenciou os argumentos necessários!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você não especificou uma faixa para busca!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -64,7 +62,9 @@ public class Play extends SlashCommand {
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("Eu preciso estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Eu preciso estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -72,12 +72,16 @@ public class Play extends SlashCommand {
         final GuildVoiceState userVoiceState = user.getVoiceState();
 
         if (!userVoiceState.inAudioChannel()) {
-            event.reply("Você precisa estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("Precisamos estar no mesmo canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Precisamos estar no mesmo canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -85,11 +89,7 @@ public class Play extends SlashCommand {
 
         if (!isURL(argument)) {
 
-            if (choice == null) {
-                link = "ytsearch:" +argument;
-            } else {
-                link = choice+argument;
-            }
+            link = Objects.requireNonNullElse(choice, "ytsearch:") + argument;
         } else {
             link = argument;
         }
@@ -98,7 +98,7 @@ public class Play extends SlashCommand {
         PlayerManager.getInstance()
                 .loadAndPlay(channel, link);
 
-        event.reply("Adicionando faixa(s)...").setEphemeral(true).queue();
+        event.reply(":open_file_folder: **`> Adicionando faixa(s)...`**").setEphemeral(true).queue();
 
     }
 

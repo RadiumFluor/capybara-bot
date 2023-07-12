@@ -8,6 +8,7 @@ import com.tabernastudios.capybarabot.audio.PlayerManager;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 public class Skip extends SlashCommand {
 
@@ -18,12 +19,16 @@ public class Skip extends SlashCommand {
     @Override
     protected void execute(SlashCommandEvent event) {
 
-        final TextChannel channel = event.getTextChannel();
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
+
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("Eu preciso estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Eu preciso estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -31,12 +36,16 @@ public class Skip extends SlashCommand {
         final GuildVoiceState userVoiceState = user.getVoiceState();
 
         if (!userVoiceState.inAudioChannel()) {
-            event.reply("Você precisa estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("Precisamos estar no mesmo canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Precisamos estar no mesmo canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -44,11 +53,13 @@ public class Skip extends SlashCommand {
         final AudioPlayer audioPlayer = musicController.audioPlayer;
 
         if (audioPlayer.getPlayingTrack() == null) {
-            event.reply("Não existem faixas para pular!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Não há nenhuma faixa tocando no momento!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
-        musicController.scheduler.nextTrack();
-        event.reply("Faixa pulada! Indo para a próxima...").queue();
+        musicController.scheduler.skip();
+        event.reply(":track_next: **`> Faixa pulada! Indo para a próxima...`**").queue();
     }
 }

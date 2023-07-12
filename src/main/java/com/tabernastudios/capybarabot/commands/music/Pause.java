@@ -8,6 +8,7 @@ import com.tabernastudios.capybarabot.audio.PlayerManager;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 public class Pause extends SlashCommand {
 
@@ -18,12 +19,17 @@ public class Pause extends SlashCommand {
 
     @Override
     protected void execute(SlashCommandEvent event) {
-        final TextChannel channel = event.getTextChannel();
+
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
+
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("Eu preciso estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Eu não estou em um canal de voz no momento!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -31,12 +37,16 @@ public class Pause extends SlashCommand {
         final GuildVoiceState userVoiceState = user.getVoiceState();
 
         if (!userVoiceState.inAudioChannel()) {
-            event.reply("Você precisa estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você precisa estar no meu canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("Precisamos estar no mesmo canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Não estamos no mesmo canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -44,20 +54,20 @@ public class Pause extends SlashCommand {
         final AudioPlayer audioPlayer = musicController.audioPlayer;
 
         if (audioPlayer.getPlayingTrack() == null) {
-            event.reply("Não há nada tocando!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Não há nenhuma faixa tocando no momento!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         boolean togglePause = !musicController.scheduler.player.isPaused();
 
-        musicController.scheduler.player.setPaused(togglePause);
+        musicController.scheduler.setPause(togglePause);
 
         if (togglePause) {
-            event.reply("Faixa pausada!").queue();
-            return;
+            event.reply(":pause_button: **`> Faixa pausada!`**").queue();
         } else {
-            event.reply("Faixa despausada!").queue();
-            return;
+            event.reply(":arrow_forward: **`> Faixa despausada!`**").queue();
         }
 
     }

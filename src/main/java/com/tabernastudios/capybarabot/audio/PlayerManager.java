@@ -1,7 +1,6 @@
 package com.tabernastudios.capybarabot.audio;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
-import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
@@ -45,11 +44,7 @@ public class PlayerManager {
         this.audioPlayerManager.loadItemOrdered(musicController, trackURL, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
-                musicController.scheduler.setQueue(track);
-                channel.sendMessage("Adicionado à fila: `"
-                        + track.getInfo().title
-                        + "` de **" + track.getInfo().author + "**.")
-                        .queue();
+                musicController.scheduler.addQueue(track);
 
             }
 
@@ -62,24 +57,13 @@ public class PlayerManager {
                 if (playlist.isSearchResult()) {
 
                     AudioTrack track = trackList.get(0);
-                    musicController.scheduler.setQueue(track);
-                    channel.sendMessage("Adicionado à fila: `"
-                                    + track.getInfo().title
-                                    + "` de **" + track.getInfo().author + "**.")
-                            .queue();
+                    musicController.scheduler.addQueue(track);
 
                 } else {
                     for (final AudioTrack track : trackList) {
 
-                        musicController.scheduler.setQueue(track);
+                        musicController.scheduler.addQueue(track);
                     }
-
-                    channel.sendMessage("Adicionado(s) `"
-                                    + String.valueOf(trackList.size())
-                                    + "` faixas da playlist **"
-                                    + playlist.getName()
-                                    + "** à fila.")
-                            .queue();
                 }
 
 
@@ -94,7 +78,10 @@ public class PlayerManager {
             public void loadFailed(FriendlyException exception) {
 
             }
+
+
         });
+
     }
     public static PlayerManager getInstance() {
         if (INSTANCE == null) {

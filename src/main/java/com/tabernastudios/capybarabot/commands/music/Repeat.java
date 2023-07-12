@@ -11,9 +11,9 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.util.Collections;
-import java.util.List;
 
 public class Repeat extends SlashCommand {
 
@@ -40,20 +40,25 @@ public class Repeat extends SlashCommand {
     @Override
     protected void execute(SlashCommandEvent event) {
 
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
 
         String argument = event.optString("valor");
 
         if (argument == null) {
-            event.reply("Erro! Você não providenciou os argumentos necessários!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você não especificou uma faixa para busca!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
-        final TextChannel channel = event.getTextChannel();
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("Eu preciso estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Eu preciso estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
@@ -61,26 +66,40 @@ public class Repeat extends SlashCommand {
         final GuildVoiceState userVoiceState = user.getVoiceState();
 
         if (!userVoiceState.inAudioChannel()) {
-            event.reply("Você precisa estar em um canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("Precisamos estar no mesmo canal de voz!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Precisamos estar no mesmo canal de voz!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         final MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
         final AudioPlayer audioPlayer = musicController.audioPlayer;
 
-        if (audioPlayer.getPlayingTrack() == null) {
-            event.reply("Não há faixas tocando!").setEphemeral(true).queue();
-            return;
-        }
 
         musicController.scheduler.repeat = argument;
+        String emoji = null;
 
-        event.reply("Modo de repetição definido para: `"+ argument +"`").queue();
+        switch (argument) {
+            case "NENHUM":
+                emoji = ":fast_forward:";
+                        break;
+            case "ATUAL":
+                emoji = ":repeat_one:";
+                break;
+            case "TODOS":
+                emoji = ":repeat:";
+                break;
+
+        }
+
+        event.reply(emoji + " **`> Modo de repetição definido para "+ event.getOption("valor").getName() + "`**").queue();
 
     }
 }

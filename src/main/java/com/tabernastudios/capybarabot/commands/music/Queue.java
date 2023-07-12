@@ -6,13 +6,13 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
-import net.dv8tion.jda.api.entities.MessageActivity;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
 public class Queue extends SlashCommand {
@@ -27,11 +27,11 @@ public class Queue extends SlashCommand {
 
         TextChannel textChannel = event.getChannel().asTextChannel();
         MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
-        BlockingQueue<AudioTrack> queue = musicController.scheduler.queue;
+        ConcurrentLinkedDeque<AudioTrack> queue = musicController.scheduler.queue;
 
         final AudioTrack nowPlaying = musicController.audioPlayer.getPlayingTrack();
 
-        if (queue.isEmpty() || nowPlaying == null) {
+        if (queue.isEmpty() && nowPlaying == null) {
             event.reply("A fila está vazia no momento!").setEphemeral(true).queue();
             return;
         }
@@ -73,8 +73,7 @@ public class Queue extends SlashCommand {
                         .addContent(" faixas...");
             }
         }
-
-        messageActivity.queue();
+        event.reply(messageActivity.getContent()).queue();
     }
 
     private String formatTime(long duration) {

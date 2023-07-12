@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.managers.AudioManager;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 public class Leave extends SlashCommand {
 
@@ -17,15 +18,21 @@ public class Leave extends SlashCommand {
         this.help = "Saio no canal de voz que você está.";
     }
 
-    @SuppressWarnings("ConstantConditions")
     @Override
     protected void execute(SlashCommandEvent event) {
-        final TextChannel channel = event.getTextChannel();
+
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
+
+        event.reply(":arrows_counterclockwise: **`> Desconectando do canal...`**").queue();
+
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
         if (!selfVoiceState.inAudioChannel()) {
-            event.reply("Eu não estou em nenhum canal!").setEphemeral(true).queue();
+            event.getHook().editOriginal(warningMessage.addContent("Eu não estou em nenhum canal de voz!")
+                    .addContent("`**")
+                    .getContent()).queue();
             return;
         }
 
@@ -34,25 +41,22 @@ public class Leave extends SlashCommand {
 
 
         if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply("Precisamos estar no mesmo canal!").setEphemeral(true).queue();
+            event.getHook().editOriginal(warningMessage.addContent("Precisamos estar no mesmo canal!")
+                    .addContent("`**")
+                    .getContent()).queue();
             return;
         }
 
         final MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
 
-        musicController.scheduler.player.stopTrack();
-        musicController.scheduler.queue.clear();
-        musicController.scheduler.repeat = "NENHUM";
-        musicController.audioPlayer.setPaused(false);
+        musicController.scheduler.stop();
 
         final AudioManager audioManager = event.getGuild().getAudioManager();
-        final VoiceChannel voiceChannel = userVoiceState.getChannel().asVoiceChannel();
 
+        VoiceChannel voiceChannel = audioManager.getConnectedChannel().asVoiceChannel();
         audioManager.closeAudioConnection();
 
-
-
-        event.reply("Desconectando do canal...").queue();
+        event.getHook().editOriginal(":mute: **`> Desconectado!`** " + voiceChannel.getAsMention()).queue();
 
     }
 }

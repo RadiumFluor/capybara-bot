@@ -5,11 +5,19 @@ import com.jagrosh.jdautilities.command.SlashCommandEvent;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
+import com.sun.jdi.Field;
 import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
+
+import java.awt.*;
+import java.text.Format;
+import java.util.concurrent.TimeUnit;
 
 public class NowPlaying extends SlashCommand {
 
@@ -21,7 +29,10 @@ public class NowPlaying extends SlashCommand {
     @Override
     protected void execute(SlashCommandEvent event) {
 
-        final TextChannel channel = event.getTextChannel();
+
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
+
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
 
@@ -30,16 +41,40 @@ public class NowPlaying extends SlashCommand {
         final AudioTrack track = player.getPlayingTrack();
 
         if (track == null || !selfVoiceState.inAudioChannel()) {
-            event.reply("Não há nenhuma faixa tocando no momento.").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("Não há nenhuma faixa tocando no momento!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
         final AudioTrackInfo info = track.getInfo();
 
-        event.replyFormat("**>>** Tocando agora: `%s` de **%s** (Link: <%s>)",
-                info.title,
-                info.author,
-                info.uri).queue();
+
+        EmbedBuilder nowPlayingEmbed =
+                new EmbedBuilder()
+                        .setColor(Color.getHSBColor(24, 78, 81))
+                        .setTitle(info.title, info.uri)
+                        .addField(new MessageEmbed.Field("⌛ Duração",
+                                formatTime(track.getPosition()) + " / " + formatTime(track.getDuration()),
+                                true))
+                        .addField(new MessageEmbed.Field("👥 Por",
+                                info.author, true));
+
+
+        event.replyEmbeds(nowPlayingEmbed.build()).queue();
+
+    }
+
+    private String formatTime(long duration) {
+        final long hours = duration / TimeUnit.HOURS.toMillis(1);
+        final long minutes = duration / TimeUnit.MINUTES.toMillis(1);
+        final long seconds = duration % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);
+
+        if (hours == 0) {
+            return String.format("%02d:%02d", minutes, seconds);
+        }
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
 
     }
 }
