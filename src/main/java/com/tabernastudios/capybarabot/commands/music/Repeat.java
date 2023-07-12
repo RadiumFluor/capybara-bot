@@ -99,7 +99,7 @@ public class Repeat extends SlashCommand {
 
         }
 
-        event.reply(emoji + " **`> Modo de repetição definido para "+ event.getOption("valor").getName() + "`**").queue();
+        event.reply(emoji + " **`> Modo de repetição definido para "+ event.getOption("valor") + "`**").queue();
 
     }
 }

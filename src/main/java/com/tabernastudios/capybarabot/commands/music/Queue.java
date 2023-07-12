@@ -6,9 +6,13 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
+import com.tabernastudios.capybarabot.utils.TimeFormatting;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -25,67 +29,61 @@ public class Queue extends SlashCommand {
     @Override
     protected void execute(SlashCommandEvent event) {
 
+        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
+                .addContent(" **`> ");
+
         TextChannel textChannel = event.getChannel().asTextChannel();
         MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
         ConcurrentLinkedDeque<AudioTrack> queue = musicController.scheduler.queue;
-
         final AudioTrack nowPlaying = musicController.audioPlayer.getPlayingTrack();
 
         if (queue.isEmpty() && nowPlaying == null) {
-            event.reply("A fila está vazia no momento!").setEphemeral(true).queue();
+            event.reply(warningMessage.addContent("A fila está vazia no momento!")
+                    .addContent("`**")
+                    .getContent()).setEphemeral(true).queue();
             return;
         }
 
+        event.deferReply().queue();
 
         final int trackCount = Math.min(queue.size(), 9);
         final List<AudioTrack> trackList = new ArrayList<>(queue);
-
+        final EmbedBuilder queueEmbed = new EmbedBuilder();
         final AudioTrackInfo nowPlayingInfo = nowPlaying.getInfo();
-        final MessageCreateAction messageActivity = textChannel.sendMessage("**FILA ATUAL:**\n");
-        messageActivity.addContent("\n**>>** `")
-                .addContent(nowPlayingInfo.title)
-                .addContent("` de **")
-                .addContent(nowPlayingInfo.author)
-                .addContent("** `[")
-                .addContent(formatTime(nowPlaying.getDuration() - nowPlaying.getPosition()))
-                .addContent("/")
-                .addContent(formatTime(nowPlaying.getDuration()))
-                .addContent("]` **<<**\n");
+
+        queueEmbed
+                .setAuthor("📼 Fila atual:")
+                .setColor(Color.getHSBColor(280,75,96))
+                .setTitle("**>** "+nowPlayingInfo.title, nowPlayingInfo.uri)
+                .addField(new MessageEmbed.Field("⌛ Duração",
+                        "`"+TimeFormatting.formatTime(musicController.scheduler.queueDuration)+"`", true))
+                .addField(new MessageEmbed.Field("💽 Total de faixas",
+                        "`"+trackList.size() + "` faixas.",
+                        true))
+                .addField(new MessageEmbed.Field(":repeat: Repetir",
+                        "`"+musicController.scheduler.repeat+"`",false));
+
 
         for (int i = 0; i < trackCount; i++) {
             final AudioTrack track = trackList.get(i);
             final AudioTrackInfo info = track.getInfo();
 
-            messageActivity
-                    .addContent("#")
-                    .addContent(String.valueOf(i+1))
-                    .addContent(" `")
-                    .addContent(info.title)
-                    .addContent("` de **")
-                    .addContent(info.author)
-                    .addContent("** `[")
-                    .addContent(formatTime(track.getDuration()))
-                    .addContent("]`\n");
+            // Queue Builder
 
-            if (trackList.size() > trackCount) {
-                messageActivity.addContent("E mais ")
-                        .addContent(String.valueOf(trackList.size() - trackCount))
-                        .addContent(" faixas...");
-            }
+            queueEmbed.appendDescription("`#"+ (i+2) +"` ");
+            queueEmbed.appendDescription("[**"+ info.title +"** :: ");
+            queueEmbed.appendDescription(info.author +"]("+ info.uri +") ");
+            queueEmbed.appendDescription("`["+ TimeFormatting.formatTime(info.length) +"]` ");
+            queueEmbed.appendDescription("\n");
+
         }
-        event.reply(messageActivity.getContent()).queue();
+
+        if (trackList.size() > trackCount) {
+            queueEmbed.appendDescription("_E mais "+ (trackList.size()-10) +" faixa(s)_");
+        }
+
+        event.getHook().sendMessageEmbeds(queueEmbed.build()).queue();
+
     }
 
-    private String formatTime(long duration) {
-        final long hours = duration / TimeUnit.HOURS.toMillis(1);
-        final long minutes = duration / TimeUnit.MINUTES.toMillis(1);
-        final long seconds = duration % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);
-
-        if (hours == 0) {
-            return String.format("%02d:%02d", minutes, seconds);
-        }
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-
-
-    }
 }

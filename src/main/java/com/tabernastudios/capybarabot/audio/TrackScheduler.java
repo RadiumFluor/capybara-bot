@@ -7,11 +7,17 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.tabernastudios.capybarabot.Main;
+import com.tabernastudios.capybarabot.utils.TimeFormatting;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 
@@ -24,18 +30,27 @@ public class TrackScheduler extends AudioEventAdapter {
     public final Throwable onErrorHook = null;
     private AudioTrack lastTrack;
     private AudioTrack lastLoadedTrack;
-    public String repeat = "NONE";
+    public String repeat = "NENHHUM";
+    public Long queueDuration;
     public TextChannel announceChannel;
+
+
 
     public TrackScheduler(AudioPlayer player) {
         this.player = player;
         this.queue = new ConcurrentLinkedDeque<>();
         this.historyQueue = new ConcurrentLinkedDeque<>();
+        this.queueDuration = 0L;
     }
 
-    public void addQueue(AudioTrack track) {
+    public void addQueue(AudioTrack track, User member, boolean announce) {
+        track.setUserData(member.getIdLong());
+        queueDuration += track.getDuration();
         queue.add(track);
+
         // TODO > Adicionar o anúncio de faixa adicionada;
+
+        final AudioTrackInfo info = track.getInfo();
 
         if (player.isPaused()) {
             setPause(false);
@@ -44,6 +59,27 @@ public class TrackScheduler extends AudioEventAdapter {
         if (player.getPlayingTrack() == null) {
             nextTrack();
         }
+
+        if (announceChannel != null && queue.size() > 0 && announce) {
+
+            EmbedBuilder addedToQueue =
+                    new EmbedBuilder()
+                            .setAuthor("📥 Adicionado à fila:")
+                            .setColor(Color.HSBtoRGB(280,75,96))
+                            .setTitle(info.title, info.uri)
+                            .addField(new MessageEmbed.Field("⌛ Duração",
+                                    TimeFormatting.formatTime(track.getDuration()),
+                                    true))
+                            .addField(new MessageEmbed.Field("👥 Por",
+                                    info.author, true))
+                            .addField(new MessageEmbed.Field("📂 Adicionado por",
+                                    member.getAsMention(), false));
+
+            announceChannel.sendMessageEmbeds(addedToQueue.build()).queue();
+
+
+        };
+
     }
 
     public void stopTrack() {
@@ -64,6 +100,14 @@ public class TrackScheduler extends AudioEventAdapter {
         lastTrack = null;
         queue.clear();
         historyQueue.clear();
+        queueDuration = 0L;
+    }
+
+    public void shuffleQueue() {
+        List<AudioTrack> trackList = new ArrayList<>(queue);
+        Collections.shuffle(trackList);
+        queue.clear();
+        queue.addAll(trackList);
     }
 
     public void skip() {
@@ -98,22 +142,24 @@ public class TrackScheduler extends AudioEventAdapter {
         // TODO > Adicionar e refinar o aviso de faixa tocando;
         if (announceChannel != null) {
             final AudioTrackInfo info = track.getInfo();
+            final UserSnowflake member = User.fromId(track.getUserData(Long.class));
 
             EmbedBuilder nowPlayingEmbed =
                     new EmbedBuilder()
-                            .setColor(Color.getHSBColor(24, 78, 81))
+                            .setAuthor("🎧 Tocando agora:")
+                            .setColor(Color.HSBtoRGB(280,75,96))
                             .setTitle(info.title, info.uri)
                             .addField(new MessageEmbed.Field("⌛ Duração",
-                                    formatTime(track.getDuration()),
+                                    TimeFormatting.formatTime(track.getDuration()),
                                     true))
                             .addField(new MessageEmbed.Field("👥 Por",
-                                    info.author, true));
+                                    info.author, true))
+                            .addField(new MessageEmbed.Field("📂 Adicionado por",
+                                    member.getAsMention(), false));;
 
-            announceChannel.sendMessageFormat("**>>** Tocando agora: `%s` de **%s** (Link: <%s>)",
-                    track.getInfo().title,
-                    track.getInfo().author,
-                    track.getInfo().uri).queue();
-        }
+            announceChannel.sendMessageEmbeds(nowPlayingEmbed.build()).queue();
+
+        } else { Main.logger.severe("Não foi possível enviar o anúncio de faixa!");}
 
 
 
@@ -145,6 +191,12 @@ public class TrackScheduler extends AudioEventAdapter {
             Main.logger.warning("Faixa" + track.getIdentifier() + " terminou com erro inesperado!");
         }
 
+        if (queue.isEmpty()) {
+            announceChannel.sendMessage(":no_entry: **`> A fila está vazia! Todas as faixas foram tocadas.`**");
+        }
+
+        queueDuration -= track.getDuration();
+
         // endReason == FINISHED: A track finished or died by an exception (mayStartNext = true).
         // endReason == LOAD_FAILED: Loading of a track failed (mayStartNext = true).
         // endReason == STOPPED: The player was stopped.
@@ -165,6 +217,7 @@ public class TrackScheduler extends AudioEventAdapter {
         if (repeat.equals("TODOS") && lastTrack != null) {
             AudioTrack clone = lastTrack.makeClone();
             queue.addLast(clone);
+            queueDuration += clone.getDuration();
         }
 
         lastTrack = queue.poll();
@@ -192,18 +245,6 @@ public class TrackScheduler extends AudioEventAdapter {
         // Audio track has been unable to provide us any audio, might want to just start a new track
     }
 
-    private String formatTime(long duration) {
-        final long hours = duration / TimeUnit.HOURS.toMillis(1);
-        final long minutes = duration / TimeUnit.MINUTES.toMillis(1);
-        final long seconds = duration % TimeUnit.MINUTES.toMillis(1) / TimeUnit.SECONDS.toMillis(1);
-
-        if (hours == 0) {
-            return String.format("%02d:%02d", minutes, seconds);
-        }
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
-
-
-    }
 
 
 }

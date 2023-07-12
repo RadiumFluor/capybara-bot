@@ -7,9 +7,14 @@ import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import com.tabernastudios.capybarabot.utils.TimeFormatting;
+import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
+import java.awt.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +43,13 @@ public class PlayerManager {
     }
 
 
-    public void loadAndPlay(TextChannel channel, String trackURL) {
+    public void loadAndPlay(TextChannel channel, String trackURL, User member) {
         final MusicController musicController = this.getMusicController(channel.getGuild());
 
         this.audioPlayerManager.loadItemOrdered(musicController, trackURL, new AudioLoadResultHandler() {
             @Override
             public void trackLoaded(AudioTrack track) {
-                musicController.scheduler.addQueue(track);
+                musicController.scheduler.addQueue(track, member, true);
 
             }
 
@@ -57,13 +62,30 @@ public class PlayerManager {
                 if (playlist.isSearchResult()) {
 
                     AudioTrack track = trackList.get(0);
-                    musicController.scheduler.addQueue(track);
+                    musicController.scheduler.addQueue(track, member, true);
 
                 } else {
+                    long totalDuration = 0;
                     for (final AudioTrack track : trackList) {
-
-                        musicController.scheduler.addQueue(track);
+                        totalDuration += track.getDuration();
+                        musicController.scheduler.addQueue(track, member, false);
                     }
+
+                    EmbedBuilder addedToQueue =
+                            new EmbedBuilder()
+                                    .setAuthor("📥 Adicionadas à fila:")
+                                    .setColor(Color.HSBtoRGB(280,75,96))
+                                    .setTitle(playlist.getName(), trackURL)
+                                    .addField(new MessageEmbed.Field("⌛ Duração",
+                                            TimeFormatting.formatTime(totalDuration),
+                                            true))
+                                    .addField(new MessageEmbed.Field("💽 Total de faixas",
+                                            playlist.getTracks().size() + " faixas", true))
+                                    .addField(new MessageEmbed.Field("📂 Adicionado por",
+                                            member.getAsMention(), false));
+
+                    musicController.scheduler.announceChannel.sendMessageEmbeds(addedToQueue.build()).queue();
+
                 }
 
 

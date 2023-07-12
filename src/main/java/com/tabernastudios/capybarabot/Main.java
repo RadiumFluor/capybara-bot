@@ -68,7 +68,8 @@ public class Main extends ListenerAdapter {
                         new Queue(),
                         new Repeat(),
                         new Pause(),
-                        new Leave()
+                        new Leave(),
+                        new Shuffle()
                 )
                 .setOwnerId(config.get("OWNER_ID"));
         logger.fine("Comandos importados!");

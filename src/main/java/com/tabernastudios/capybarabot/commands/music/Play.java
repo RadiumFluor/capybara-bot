@@ -96,7 +96,7 @@ public class Play extends SlashCommand {
 
 
         PlayerManager.getInstance()
-                .loadAndPlay(channel, link);
+                .loadAndPlay(channel, link, event.getUser());
 
         event.reply(":open_file_folder: **`> Adicionando faixa(s)...`**").setEphemeral(true).queue();
 
