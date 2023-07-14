@@ -1,76 +1,77 @@
-package com.tabernastudios.capybarabot.commands.music;
+package com.tabernastudios.capybarabot.listeners;
 
-import com.jagrosh.jdautilities.command.SlashCommand;
-import com.jagrosh.jdautilities.command.SlashCommandEvent;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
+import com.tabernastudios.capybarabot.Main;
 import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
 import com.tabernastudios.capybarabot.utils.TimeFormatting;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
-import net.dv8tion.jda.api.utils.data.DataObject;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.TimeUnit;
 
-public class Queue extends SlashCommand {
+public class QueueInteraction extends ListenerAdapter {
 
-    public Queue() {
-        this.name = "fila";
-        this.help = "Exibe a fila de faixas a serem tocadas.";
 
-    }
+    public static int currentPage = 1;
 
     @Override
-    protected void execute(SlashCommandEvent event) {
-
-        MessageCreateAction warningMessage = event.getTextChannel().sendMessage(":warning:")
-                .addContent(" **`> ");
+    public void onButtonInteraction(ButtonInteractionEvent event) {
 
         MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
         ConcurrentLinkedDeque<AudioTrack> queue = musicController.scheduler.queue;
         final AudioTrack nowPlaying = musicController.audioPlayer.getPlayingTrack();
-        int pageSize = 10, currentPage = 1;
+
+        int pageSize = 9;
         int numPages = (int) Math.ceil((double) queue.size() / pageSize);
-        int pageNumber = Math.max(1, Math.min(currentPage, numPages));
 
-        if (queue.isEmpty() && nowPlaying == null) {
-            event.reply(warningMessage.addContent("A fila está vazia no momento!")
-                    .addContent("`**")
-                    .getContent()).setEphemeral(true).queue();
-            return;
+
+        switch (event.getComponentId()) {
+            case "previous":
+
+                int previousPage = Math.max(1, currentPage - 1);
+                currentPage = previousPage;
+                break;
+            case "next":
+                int nextPage = Math.min(numPages, currentPage + 1);
+                currentPage = nextPage;
+                break;
+
+            default:
+                return;
         }
+        ;
 
-        event.deferReply().queue();
+        Main.logger.info("Interação com botão: "+event.getComponentId());
+
+
 
         final List<AudioTrack> trackList = new ArrayList<>(queue);
-        final int trackCount = Math.min(queue.size(), 9);
         final EmbedBuilder queueEmbed = new EmbedBuilder();
         final AudioTrackInfo nowPlayingInfo = nowPlaying.getInfo();
 
         queueEmbed
                 .setAuthor("📼 Fila atual:")
-                .setColor(Color.getHSBColor(280,75,96))
-                .setTitle("**>** "+nowPlayingInfo.title, nowPlayingInfo.uri)
+                .setColor(Color.getHSBColor(280, 75, 96))
+                .setTitle("**>** " + nowPlayingInfo.title, nowPlayingInfo.uri)
                 .addField(new MessageEmbed.Field("⌛ Duração",
-                        "`"+TimeFormatting.formatTime(musicController.scheduler.queueDuration)+"`", true))
+                        "`" + TimeFormatting.formatTime(musicController.scheduler.queueDuration) + "`", true))
                 .addField(new MessageEmbed.Field("💽 Total de faixas",
-                        "`"+trackList.size() + "` faixas.",
+                        "`" + trackList.size() + "` faixas.",
                         true))
                 .addField(new MessageEmbed.Field(":repeat: Repetir",
-                        "`"+musicController.scheduler.repeat+"`",false));
+                        "`" + musicController.scheduler.repeat + "`", false));
 
-
+        int pageNumber = Math.max(1, Math.min(currentPage, numPages));
         int startIndex = (pageNumber - 1) * pageSize;
         int endIndex = Math.min(startIndex + pageSize, queue.size());
         List<AudioTrack> pageTracks = new ArrayList<>(queue);
@@ -92,7 +93,7 @@ public class Queue extends SlashCommand {
 
         if (numPages > 1 && endIndex < queue.size()) {
             int remainingTracks = queue.size() - endIndex;
-            queueEmbed.appendDescription("_E mais " + remainingTracks + " faixa(s)_");
+            queueEmbed.appendDescription("**_E mais " + remainingTracks + " faixa(s)_**");
         }
 
         boolean disablePrev = false, disableNext = false;
@@ -107,7 +108,7 @@ public class Queue extends SlashCommand {
 
 
         String pageCounter = currentPage + " de " + Math.max(numPages, 1);
-        event.getHook().editOriginalEmbeds(queueEmbed.build())
+        event.editMessageEmbeds(queueEmbed.build())
                 .setActionRow(
                         Button.primary("previous", "Página anterior").withDisabled(disablePrev),
                         Button.secondary("currentPage", pageCounter).withDisabled(true),
@@ -137,5 +138,4 @@ public class Queue extends SlashCommand {
         }
         return title;
     }
-
 }

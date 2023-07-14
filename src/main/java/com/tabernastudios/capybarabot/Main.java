@@ -2,15 +2,18 @@ package com.tabernastudios.capybarabot;
 
 import com.jagrosh.jdautilities.command.CommandClient;
 import com.jagrosh.jdautilities.command.CommandClientBuilder;
+import com.jagrosh.jdautilities.command.SlashCommand;
+import com.jagrosh.jdautilities.command.SlashCommandEvent;
 import com.jagrosh.jdautilities.commons.waiter.EventWaiter;
 import com.tabernastudios.capybarabot.commands.general.Ping;
 import com.tabernastudios.capybarabot.commands.music.*;
+import com.tabernastudios.capybarabot.commands.owner.Shutdown;
 import com.tabernastudios.capybarabot.listeners.EventListener;
+import com.tabernastudios.capybarabot.listeners.QueueInteraction;
 import com.tabernastudios.capybarabot.logging.LoggingFormater;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.sharding.DefaultShardManagerBuilder;
@@ -19,7 +22,6 @@ import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
-import javax.security.auth.login.LoginException;
 import java.util.Arrays;
 import java.util.logging.*;
 
@@ -36,7 +38,10 @@ public class Main extends ListenerAdapter {
             GatewayIntent.GUILD_MESSAGE_REACTIONS,
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_PRESENCES,
-            GatewayIntent.GUILD_EMOJIS_AND_STICKERS};
+            GatewayIntent.GUILD_EMOJIS_AND_STICKERS,
+            GatewayIntent.GUILD_MEMBERS,
+            GatewayIntent.MESSAGE_CONTENT,
+            GatewayIntent.SCHEDULED_EVENTS};
     private final ShardManager shardManager;
 
     public Main() {
@@ -58,6 +63,7 @@ public class Main extends ListenerAdapter {
         logger.info("Importando comandos...");
         CommandClientBuilder builder = new CommandClientBuilder();
         builder
+                .setOwnerId(config.get("OWNER_ID"))
                 .addSlashCommands(
                         new Ping(),
                         new Play(),
@@ -69,9 +75,12 @@ public class Main extends ListenerAdapter {
                         new Repeat(),
                         new Pause(),
                         new Leave(),
-                        new Shuffle()
-                )
-                .setOwnerId(config.get("OWNER_ID"));
+                        new Shuffle(),
+                        new Shutdown()
+                );
+
+
+
         logger.fine("Comandos importados!");
         logger.info("Registrando comandos...");
 
@@ -87,7 +96,10 @@ public class Main extends ListenerAdapter {
                 .enableIntents(Arrays.asList(INTENTS))
                 .setMemberCachePolicy(MemberCachePolicy.DEFAULT)
                 .setChunkingFilter(ChunkingFilter.ALL)
-                .addEventListeners(commandClient, waiter, new EventListener())
+                .addEventListeners(commandClient,
+                        waiter,
+                        new EventListener(),
+                        new QueueInteraction())
                 .setActivity(Activity.listening("RadiumFluor"));
 
         shardManager = shardBuilder.build();

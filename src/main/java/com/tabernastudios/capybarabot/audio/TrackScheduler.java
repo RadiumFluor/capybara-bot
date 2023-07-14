@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.awt.*;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +34,7 @@ public class TrackScheduler extends AudioEventAdapter {
     public String repeat = "NENHHUM";
     public Long queueDuration;
     public TextChannel announceChannel;
+    public Message lastAnnounceMessage;
 
 
 
@@ -52,20 +54,12 @@ public class TrackScheduler extends AudioEventAdapter {
 
         final AudioTrackInfo info = track.getInfo();
 
-        if (player.isPaused()) {
-            setPause(false);
-        }
-
-        if (player.getPlayingTrack() == null) {
-            nextTrack();
-        }
-
         if (announceChannel != null && queue.size() > 0 && announce) {
 
             EmbedBuilder addedToQueue =
                     new EmbedBuilder()
                             .setAuthor("📥 Adicionado à fila:")
-                            .setColor(Color.HSBtoRGB(280,75,96))
+                            .setColor(Color.HSBtoRGB(280,75,50))
                             .setTitle(info.title, info.uri)
                             .addField(new MessageEmbed.Field("⌛ Duração",
                                     TimeFormatting.formatTime(track.getDuration()),
@@ -75,10 +69,21 @@ public class TrackScheduler extends AudioEventAdapter {
                             .addField(new MessageEmbed.Field("📂 Adicionado por",
                                     member.getAsMention(), false));
 
-            announceChannel.sendMessageEmbeds(addedToQueue.build()).queue();
+
+            announceChannel.sendMessageEmbeds(addedToQueue.build()).complete();
+
 
 
         };
+
+
+        if (player.isPaused()) {
+            setPause(false);
+        }
+
+        if (player.getPlayingTrack() == null) {
+            nextTrack();
+        }
 
     }
 
@@ -87,8 +92,12 @@ public class TrackScheduler extends AudioEventAdapter {
     }
 
     public void stop() {
+        String lastRepeatMode = repeat;
+        this.repeat = "NENHUM";
         clear();
+        updateHistoryQueue();
         stopTrack();
+        this.repeat = lastRepeatMode;
     }
 
     public void setPause(boolean pause) {
@@ -97,10 +106,11 @@ public class TrackScheduler extends AudioEventAdapter {
 
 
     public void clear() {
-        lastTrack = null;
         queue.clear();
         historyQueue.clear();
         queueDuration = 0L;
+        this.lastTrack = null;
+        setLastTrack(null);
     }
 
     public void shuffleQueue() {
@@ -110,7 +120,20 @@ public class TrackScheduler extends AudioEventAdapter {
         queue.addAll(trackList);
     }
 
-    public void skip() {
+    public void skip(int index) {
+
+        if (index > 0 || index < queue.size()) {
+
+            int currentIndex = index-1;
+                if (currentIndex >= 0 && currentIndex < queue.size()) {
+                    while (currentIndex > 0) {
+                        queue.removeFirst();
+                        currentIndex--;
+                    }
+                }
+
+        }
+
         trackSkipped();
         stopTrack();
     }
@@ -141,13 +164,18 @@ public class TrackScheduler extends AudioEventAdapter {
         // A track started playing
         // TODO > Adicionar e refinar o aviso de faixa tocando;
         if (announceChannel != null) {
+
+            if (lastAnnounceMessage != null) {
+                lastAnnounceMessage.delete().queue();
+            }
+
             final AudioTrackInfo info = track.getInfo();
             final UserSnowflake member = User.fromId(track.getUserData(Long.class));
 
             EmbedBuilder nowPlayingEmbed =
                     new EmbedBuilder()
                             .setAuthor("🎧 Tocando agora:")
-                            .setColor(Color.HSBtoRGB(280,75,96))
+                            .setColor(Color.HSBtoRGB(280,75,50))
                             .setTitle(info.title, info.uri)
                             .addField(new MessageEmbed.Field("⌛ Duração",
                                     TimeFormatting.formatTime(track.getDuration()),
@@ -157,7 +185,8 @@ public class TrackScheduler extends AudioEventAdapter {
                             .addField(new MessageEmbed.Field("📂 Adicionado por",
                                     member.getAsMention(), false));;
 
-            announceChannel.sendMessageEmbeds(nowPlayingEmbed.build()).queue();
+            announceChannel.sendMessageEmbeds(nowPlayingEmbed.build())
+                    .queueAfter(1,TimeUnit.SECONDS,message -> lastAnnounceMessage = message);
 
         } else { Main.logger.severe("Não foi possível enviar o anúncio de faixa!");}
 
@@ -193,6 +222,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
         if (queue.isEmpty()) {
             announceChannel.sendMessage(":no_entry: **`> A fila está vazia! Todas as faixas foram tocadas.`**");
+            return;
         }
 
         queueDuration -= track.getDuration();

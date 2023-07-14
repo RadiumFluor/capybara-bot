@@ -2,13 +2,16 @@ package com.tabernastudios.capybarabot.commands.music;
 
 import com.jagrosh.jdautilities.command.SlashCommand;
 import com.jagrosh.jdautilities.command.SlashCommandEvent;
+import com.tabernastudios.capybarabot.audio.MusicController;
 import com.tabernastudios.capybarabot.audio.PlayerManager;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
+import net.dv8tion.jda.api.managers.AudioManager;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.net.URI;
@@ -60,30 +63,55 @@ public class Play extends SlashCommand {
         final TextChannel channel = event.getTextChannel();
         final Member self = event.getGuild().getSelfMember();
         final GuildVoiceState selfVoiceState = self.getVoiceState();
-
-        if (!selfVoiceState.inAudioChannel()) {
-            event.reply(warningMessage.addContent("Eu preciso estar num canal de voz!")
-                    .addContent("`**")
-                    .getContent()).setEphemeral(true).queue();
-            return;
-        }
-
         final Member user = event.getMember();
         final GuildVoiceState userVoiceState = user.getVoiceState();
+        final AudioManager audioManager = event.getGuild().getAudioManager();
+        final MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
 
-        if (!userVoiceState.inAudioChannel()) {
-            event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
-                    .addContent("`**")
-                    .getContent()).setEphemeral(true).queue();
-            return;
+        if (!selfVoiceState.inAudioChannel()) {
+
+            if (!userVoiceState.inAudioChannel()) {
+                event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
+                        .addContent("`**")
+                        .getContent()).setEphemeral(true).queue();
+                return;
+            } else {
+
+                event.reply(":arrows_counterclockwise: **`> Conectando ao seu canal de voz...`**").queue();
+
+                try {
+                    final VoiceChannel voiceChannel = userVoiceState.getChannel().asVoiceChannel();
+                    musicController.scheduler.announceChannel = event.getTextChannel();
+
+                    audioManager.openAudioConnection(voiceChannel);
+
+                    event.getHook().editOriginal(":sound: **`> Conectado!`** " + voiceChannel.getAsMention()).queue();
+                } catch (IllegalStateException exception) {
+                    event.getHook().editOriginal(":no_entry: **`> Não foi possível conectar ao canal! Tente novamente mais tarde!`**").queue();
+                }
+            }
+
+
         }
 
-        if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
-            event.reply(warningMessage.addContent("Precisamos estar no mesmo canal de voz!")
-                    .addContent("`**")
-                    .getContent()).setEphemeral(true).queue();
-            return;
+        if (selfVoiceState.inAudioChannel()) {
+
+            if (!userVoiceState.inAudioChannel()) {
+                event.reply(warningMessage.addContent("Você precisa estar num canal de voz!")
+                        .addContent("`**")
+                        .getContent()).setEphemeral(true).queue();
+                return;
+            }
+
+            if (!userVoiceState.getChannel().equals(selfVoiceState.getChannel())) {
+                event.reply(warningMessage.addContent("Precisamos estar no mesmo canal de voz!")
+                        .addContent("`**")
+                        .getContent()).setEphemeral(true).queue();
+                return;
+            }
         }
+
+
 
         String link;
 
@@ -98,7 +126,7 @@ public class Play extends SlashCommand {
         PlayerManager.getInstance()
                 .loadAndPlay(channel, link, event.getUser());
 
-        event.reply(":open_file_folder: **`> Adicionando faixa(s)...`**").setEphemeral(true).queue();
+        event.getHook().editOriginal(":open_file_folder: **`> Adicionando faixa(s)...`**").queue();
 
     }
 

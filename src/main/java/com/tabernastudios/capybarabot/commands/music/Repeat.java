@@ -85,21 +85,25 @@ public class Repeat extends SlashCommand {
 
         musicController.scheduler.repeat = argument;
         String emoji = null;
+        String repeatMode = "Nenhum";
 
         switch (argument) {
             case "NENHUM":
                 emoji = ":fast_forward:";
+                repeatMode = "Nenhum";
                         break;
             case "ATUAL":
                 emoji = ":repeat_one:";
+                repeatMode = "Apenas atual";
                 break;
             case "TODOS":
                 emoji = ":repeat:";
+                repeatMode = "Fila inteira";
                 break;
 
         }
 
-        event.reply(emoji + " **`> Modo de repetição definido para "+ event.getOption("valor") + "`**").queue();
+        event.reply(emoji + " **`> Modo de repetição definido para "+ repeatMode + "`**").queue();
 
     }
 }
