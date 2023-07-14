@@ -9,14 +9,14 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.tabernastudios.capybarabot.Main;
 import com.tabernastudios.capybarabot.utils.TimeFormatting;
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Message;
+import net.dv8tion.jda.api.entities.MessageEmbed;
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 
 import java.awt.*;
-import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -74,7 +74,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
 
 
-        };
+        }
 
 
         if (player.isPaused()) {
@@ -127,6 +127,7 @@ public class TrackScheduler extends AudioEventAdapter {
             int currentIndex = index-1;
                 if (currentIndex >= 0 && currentIndex < queue.size()) {
                     while (currentIndex > 0) {
+                        queueDuration -= queue.peekFirst() != null ? queue.peekFirst().getDuration() : 0;
                         queue.removeFirst();
                         currentIndex--;
                     }
@@ -183,7 +184,7 @@ public class TrackScheduler extends AudioEventAdapter {
                             .addField(new MessageEmbed.Field("👥 Por",
                                     info.author, true))
                             .addField(new MessageEmbed.Field("📂 Adicionado por",
-                                    member.getAsMention(), false));;
+                                    member.getAsMention(), false));
 
             announceChannel.sendMessageEmbeds(nowPlayingEmbed.build())
                     .queueAfter(1,TimeUnit.SECONDS,message -> lastAnnounceMessage = message);
@@ -252,7 +253,7 @@ public class TrackScheduler extends AudioEventAdapter {
 
         lastTrack = queue.poll();
         return lastTrack;
-    };
+    }
 
     private void updateHistoryQueue() {
         setLastTrack(lastLoadedTrack);
