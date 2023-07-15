@@ -122,13 +122,23 @@ public class TrackScheduler extends AudioEventAdapter {
 
     public void skip(int index) {
 
+        List<AudioTrack> tracksToReAdd = new ArrayList<>();
+
         if (index > 0 || index < queue.size()) {
 
             int currentIndex = index-1;
                 if (currentIndex >= 0 && currentIndex < queue.size()) {
                     while (currentIndex > 0) {
-                        queueDuration -= queue.peekFirst() != null ? queue.peekFirst().getDuration() : 0;
-                        queue.removeFirst();
+
+                        if (repeat.equals("TODOS")) {
+                            AudioTrack addTrack = queue.pollFirst().makeClone();
+                            tracksToReAdd.add(addTrack);
+                        } else {
+                            queueDuration -= queue.peekFirst() != null ? queue.peekFirst().getDuration() : 0;
+                            queue.removeFirst();
+                        }
+
+
                         currentIndex--;
                     }
                 }
@@ -137,6 +147,16 @@ public class TrackScheduler extends AudioEventAdapter {
 
         trackSkipped();
         stopTrack();
+
+        try {
+            Thread.sleep(30); // Aguarda 1 segundo
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        queue.addAll(tracksToReAdd);
+
+
     }
 
     public void setLastTrack(AudioTrack lastTrack) {

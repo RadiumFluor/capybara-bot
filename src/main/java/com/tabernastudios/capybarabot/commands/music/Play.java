@@ -112,7 +112,6 @@ public class Play extends SlashCommand {
         }
 
 
-
         String link;
 
         if (!isURL(argument)) {
@@ -126,7 +125,7 @@ public class Play extends SlashCommand {
         PlayerManager.getInstance()
                 .loadAndPlay(channel, link, event.getUser());
 
-        event.getHook().editOriginal(":open_file_folder: **`> Adicionando faixa(s)...`**").queue();
+        event.getTextChannel().sendMessage(":open_file_folder: **`> Adicionando faixa(s)...`**").queue();
 
     }
 

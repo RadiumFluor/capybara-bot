@@ -66,7 +66,7 @@ public class QueueInteraction extends ListenerAdapter {
                 .addField(new MessageEmbed.Field("⌛ Duração",
                         "`" + TimeFormatting.formatTime(musicController.scheduler.queueDuration) + "`", true))
                 .addField(new MessageEmbed.Field("💽 Total de faixas",
-                        "`" + trackList.size() + "` faixas.",
+                        "`" + (trackList.size()+1) + "` faixas.",
                         true))
                 .addField(new MessageEmbed.Field(":repeat: Repetir",
                         "`" + musicController.scheduler.repeat + "`", false));
