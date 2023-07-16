@@ -23,6 +23,7 @@ import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import java.util.Arrays;
+import java.util.Scanner;
 import java.util.logging.*;
 
 
@@ -31,6 +32,7 @@ public class Main extends ListenerAdapter {
     public static final Logger logger = Logger.getLogger(Main.class.getSimpleName());
     final ConsoleHandler newHandler = new ConsoleHandler();
     final Formatter formatter = new LoggingFormater();
+
 
     public final static GatewayIntent[] INTENTS = {
             GatewayIntent.DIRECT_MESSAGES,
@@ -43,6 +45,10 @@ public class Main extends ListenerAdapter {
             GatewayIntent.MESSAGE_CONTENT,
             GatewayIntent.SCHEDULED_EVENTS};
     private final ShardManager shardManager;
+
+    public ShardManager getShardManager() {
+        return shardManager;
+    }
 
     public Main() {
 
@@ -80,7 +86,6 @@ public class Main extends ListenerAdapter {
                 );
 
 
-
         logger.fine("Comandos importados!");
         logger.info("Registrando comandos...");
 
@@ -111,8 +116,45 @@ public class Main extends ListenerAdapter {
             throws IllegalArgumentException {
         Main bot = new Main();
 
-        logger.info("Cappy Bot implantado!");
-    }
+        Thread commandThread = new Thread(() -> {
+            Scanner scanner = new Scanner(System.in);
 
+            while (true) {
+                System.out.print("Digite um comando: ");
+                String comando = scanner.nextLine();
+
+                if (comando.equals("shutdown")) {
+
+                    Thread taskThread = new Thread(() -> {
+                        bot.getShardManager().shutdown();
+                        Main.logger.warning("Desligando bot...");
+                    });
+
+                    taskThread.start();
+
+                    try {
+                        taskThread.join();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    Main.logger.info("Bot desligado!");
+
+                    System.exit(0);
+
+                }
+            }
+        });
+
+        commandThread.start();
+        logger.info("Cappy Bot implantado!");
+        try {
+            commandThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+    }
 
 }
