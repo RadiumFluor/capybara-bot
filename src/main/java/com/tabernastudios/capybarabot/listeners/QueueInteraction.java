@@ -12,12 +12,15 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
+import net.dv8tion.jda.api.utils.MarkdownUtil;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class QueueInteraction extends ListenerAdapter {
 
@@ -62,7 +65,7 @@ public class QueueInteraction extends ListenerAdapter {
         queueEmbed
                 .setAuthor("📼 Fila atual:")
                 .setColor(Color.getHSBColor(280, 75, 96))
-                .setTitle("**>** " + nowPlayingInfo.title, nowPlayingInfo.uri)
+                .setTitle("► " + nowPlayingInfo.title, nowPlayingInfo.uri)
                 .addField(new MessageEmbed.Field("⌛ Duração",
                         "`" + TimeFormatting.formatTime(musicController.scheduler.queueDuration) + "`", true))
                 .addField(new MessageEmbed.Field("💽 Total de faixas",
@@ -83,17 +86,21 @@ public class QueueInteraction extends ListenerAdapter {
 
             // Queue Builder
 
+            String formattedTrackName = MarkdownUtil.bold(formatTrackTitle(info.title, info.author))+" :: "+ info.author;
+            String trackLink = MarkdownUtil.maskedLink(
+                    formattedTrackName
+                    , info.uri);
+
             queueEmbed.appendDescription("`#" + (i + 2) + "` ");
-            queueEmbed.appendDescription("[**" + formatTrackTitle(info.title, info.author) + "** :: ");
-            queueEmbed.appendDescription(info.author + "](" + info.uri + ") ");
-            queueEmbed.appendDescription("`[" + TimeFormatting.formatTime(info.length) + "]` ");
+            queueEmbed.appendDescription(trackLink+" ");
+            queueEmbed.appendDescription("`[" + TimeFormatting.formatTime(info.length) + "]`");
             queueEmbed.appendDescription("\n");
 
         }
 
         if (numPages > 1 && endIndex < queue.size()) {
             int remainingTracks = queue.size() - endIndex;
-            queueEmbed.appendDescription("**_E mais " + remainingTracks + " faixa(s)_**");
+            queueEmbed.appendDescription("__E mais " + remainingTracks + " faixa(s)__");
         }
 
         boolean disablePrev = false, disableNext = false;
@@ -120,8 +127,11 @@ public class QueueInteraction extends ListenerAdapter {
 
 
     public String formatTrackTitle(String title, String author) {
-        int maxTitleLength = 70 - author.length() - 8;
+        int maxTitleLength = 76 - author.length() - 12;
         title = title.replace(author, "").trim();
+        title = title.replace("( ", "\\(").trim();
+
+        title = title.replace("[", "❬");
 
         title = title.trim();
 
@@ -136,6 +146,10 @@ public class QueueInteraction extends ListenerAdapter {
             title = title.substring(0, maxTitleLength - 3) + "...";
             return title;
         }
+
+        title = title.replaceAll("\\[", "❬").replaceAll("]", "❭").trim();
+
+
         return title;
     }
 }

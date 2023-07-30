@@ -24,6 +24,9 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import java.util.Arrays;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.*;
 
 
@@ -99,7 +102,7 @@ public class Main extends ListenerAdapter {
                 .enableCache(CacheFlag.MEMBER_OVERRIDES, CacheFlag.VOICE_STATE, CacheFlag.ACTIVITY, CacheFlag.EMOJI)
                 .setStatus(OnlineStatus.ONLINE)
                 .enableIntents(Arrays.asList(INTENTS))
-                .setMemberCachePolicy(MemberCachePolicy.DEFAULT)
+                .setMemberCachePolicy(MemberCachePolicy.ALL)
                 .setChunkingFilter(ChunkingFilter.ALL)
                 .addEventListeners(commandClient,
                         waiter,
@@ -110,6 +113,7 @@ public class Main extends ListenerAdapter {
         shardManager = shardBuilder.build();
         logger.fine("Sharding iniciada!");
     }
+
 
     @SuppressWarnings("unused")
     public static void main(String[] args)

@@ -71,7 +71,17 @@ public class Skip extends SlashCommand {
             return;
         }
 
-        int index = event.getOption("indice").getAsInt() - 1;
+        int index;
+
+        if (event.getOption("indice") != null) {
+            index = event.getOption("indice").getAsInt() - 1;
+
+            if (index > musicController.scheduler.queue.size() || index < 0) {
+                index = 0;
+            }
+        } else {
+            index = 0;
+        }
 
         musicController.scheduler.skip(index);
         event.reply(":track_next: **`> Faixa pulada! Indo para a próxima...`**").queue();

@@ -68,6 +68,7 @@ public class Join extends SlashCommand {
             musicController.scheduler.announceChannel = event.getTextChannel();
 
             audioManager.openAudioConnection(voiceChannel);
+            audioManager.setSelfDeafened(true);
 
             event.getHook().editOriginal(":sound: **`> Conectado!`** " + voiceChannel.getAsMention()).queue();
         } catch (IllegalStateException exception) {

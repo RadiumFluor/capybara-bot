@@ -84,6 +84,7 @@ public class Play extends SlashCommand {
                     musicController.scheduler.announceChannel = event.getTextChannel();
 
                     audioManager.openAudioConnection(voiceChannel);
+                    audioManager.setSelfDeafened(true);
 
                     event.getHook().editOriginal(":sound: **`> Conectado!`** " + voiceChannel.getAsMention()).queue();
                 } catch (IllegalStateException exception) {
@@ -125,7 +126,7 @@ public class Play extends SlashCommand {
         PlayerManager.getInstance()
                 .loadAndPlay(channel, link, event.getUser());
 
-        event.getTextChannel().sendMessage(":open_file_folder: **`> Adicionando faixa(s)...`**").queue();
+        event.reply(":open_file_folder: **`> Adicionando faixa(s)...`**").queue();
 
     }
 

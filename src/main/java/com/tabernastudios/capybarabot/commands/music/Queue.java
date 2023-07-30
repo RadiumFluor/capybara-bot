@@ -14,6 +14,8 @@ import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
+import net.dv8tion.jda.api.utils.MarkdownSanitizer;
+import net.dv8tion.jda.api.utils.MarkdownUtil;
 import net.dv8tion.jda.api.utils.data.DataObject;
 
 import java.awt.*;
@@ -22,6 +24,8 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Queue extends SlashCommand {
 
@@ -40,7 +44,7 @@ public class Queue extends SlashCommand {
         MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
         ConcurrentLinkedDeque<AudioTrack> queue = musicController.scheduler.queue;
         final AudioTrack nowPlaying = musicController.audioPlayer.getPlayingTrack();
-        int pageSize = 10, currentPage = 1;
+        int pageSize = 9, currentPage = 1;
         int numPages = (int) Math.ceil((double) queue.size() / pageSize);
         int pageNumber = Math.max(1, Math.min(currentPage, numPages));
 
@@ -61,7 +65,7 @@ public class Queue extends SlashCommand {
         queueEmbed
                 .setAuthor("📼 Fila atual:")
                 .setColor(Color.getHSBColor(280,75,96))
-                .setTitle("**>** "+nowPlayingInfo.title, nowPlayingInfo.uri)
+                .setTitle("► "+nowPlayingInfo.title, nowPlayingInfo.uri)
                 .addField(new MessageEmbed.Field("⌛ Duração",
                         "`"+TimeFormatting.formatTime(musicController.scheduler.queueDuration)+"`", true))
                 .addField(new MessageEmbed.Field("💽 Total de faixas",
@@ -82,17 +86,21 @@ public class Queue extends SlashCommand {
 
             // Queue Builder
 
+            String formattedTrackName = MarkdownUtil.bold(formatTrackTitle(info.title, info.author))+" :: "+ info.author;
+            String trackLink = MarkdownUtil.maskedLink(
+                    formattedTrackName
+                    , info.uri);
+
             queueEmbed.appendDescription("`#" + (i + 2) + "` ");
-            queueEmbed.appendDescription("[**" + formatTrackTitle(info.title, info.author) + "** :: ");
-            queueEmbed.appendDescription(info.author + "](" + info.uri + ") ");
-            queueEmbed.appendDescription("`[" + TimeFormatting.formatTime(info.length) + "]` ");
+            queueEmbed.appendDescription(trackLink+" ");
+            queueEmbed.appendDescription("`[" + TimeFormatting.formatTime(info.length) + "]`");
             queueEmbed.appendDescription("\n");
 
         }
 
         if (numPages > 1 && endIndex < queue.size()) {
             int remainingTracks = queue.size() - endIndex;
-            queueEmbed.appendDescription("_E mais " + remainingTracks + " faixa(s)_");
+            queueEmbed.appendDescription("__E mais " + remainingTracks + " faixa(s)__");
         }
 
         boolean disablePrev = false, disableNext = false;
@@ -119,8 +127,11 @@ public class Queue extends SlashCommand {
 
 
     public String formatTrackTitle(String title, String author) {
-        int maxTitleLength = 70 - author.length() - 8;
+        int maxTitleLength = 76 - author.length() - 12;
         title = title.replace(author, "").trim();
+        title = title.replace("( ", "\\(").trim();
+
+        title = title.replace("[", "❬");
 
         title = title.trim();
 
@@ -135,6 +146,10 @@ public class Queue extends SlashCommand {
             title = title.substring(0, maxTitleLength - 3) + "...";
             return title;
         }
+
+        title = title.replaceAll("\\[", "❬").replaceAll("]", "❭").trim();
+
+
         return title;
     }
 

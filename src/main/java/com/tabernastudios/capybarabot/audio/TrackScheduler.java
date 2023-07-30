@@ -7,6 +7,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import com.tabernastudios.capybarabot.Main;
+import com.tabernastudios.capybarabot.listeners.LeaveChannelRunnable;
 import com.tabernastudios.capybarabot.utils.TimeFormatting;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Message;
@@ -18,9 +19,9 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EventListener;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class TrackScheduler extends AudioEventAdapter {
 
@@ -36,6 +37,9 @@ public class TrackScheduler extends AudioEventAdapter {
     public TextChannel announceChannel;
     public Message lastAnnounceMessage;
 
+    private ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> leaveTask;
+
 
 
     public TrackScheduler(AudioPlayer player) {
@@ -43,6 +47,7 @@ public class TrackScheduler extends AudioEventAdapter {
         this.queue = new ConcurrentLinkedDeque<>();
         this.historyQueue = new ConcurrentLinkedDeque<>();
         this.queueDuration = 0L;
+        this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
     public void addQueue(AudioTrack track, User member, boolean announce) {
@@ -242,7 +247,9 @@ public class TrackScheduler extends AudioEventAdapter {
         }
 
         if (queue.isEmpty()) {
-            announceChannel.sendMessage(":no_entry: **`> A fila está vazia! Todas as faixas foram tocadas.`**");
+            announceChannel.sendMessage(":no_entry: **`> A fila está vazia! Todas as faixas foram tocadas. Irei me desconectar em 5 minutos caso não adicione mais faixas.`**");
+            LeaveChannelRunnable leaveRunnable = new LeaveChannelRunnable(announceChannel.getGuild().getSelfMember().getVoiceState().getChannel().asVoiceChannel());
+            leaveTask = scheduler.schedule(leaveRunnable, 5, TimeUnit.MINUTES);
             return;
         }
 

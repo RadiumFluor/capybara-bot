@@ -50,6 +50,10 @@ public class Leave extends SlashCommand {
         final MusicController musicController = PlayerManager.getInstance().getMusicController(event.getGuild());
 
         musicController.scheduler.stop();
+        musicController.scheduler.clear();
+        musicController.scheduler.repeat = "NENHUM";
+        musicController.scheduler.setPause(false);
+        musicController.scheduler.setLastTrack(null);
 
         final AudioManager audioManager = event.getGuild().getAudioManager();
 

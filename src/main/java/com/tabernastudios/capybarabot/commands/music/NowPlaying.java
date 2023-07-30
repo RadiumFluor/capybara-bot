@@ -18,6 +18,8 @@ import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import java.awt.*;
 import java.text.Format;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NowPlaying extends SlashCommand {
 
@@ -49,16 +51,26 @@ public class NowPlaying extends SlashCommand {
 
         final AudioTrackInfo info = track.getInfo();
 
+        Pattern pattern = Pattern.compile("v=([\\w-]+)");
+        Matcher matcher = pattern.matcher(info.uri);
+        String videoID = null;
+
+        if (matcher.find()) {
+            videoID = matcher.group(1);
+        }
+
 
         EmbedBuilder nowPlayingEmbed =
                 new EmbedBuilder()
                         .setColor(Color.getHSBColor(24, 78, 81))
-                        .setTitle(info.title, info.uri)
+                        .setTitle("► " + info.title, info.uri)
                         .addField(new MessageEmbed.Field("⌛ Duração",
-                                formatTime(track.getPosition()) + " / " + formatTime(track.getDuration()),
+                                "`" + formatTime(track.getPosition()) + " / " + formatTime(track.getDuration()) + "`",
                                 true))
                         .addField(new MessageEmbed.Field("👥 Por",
-                                info.author, true));
+                                info.author, true))
+                        .setImage("https://img.youtube.com/vi/"+ videoID +"/hqdefault.jpg")
+                ;
 
 
         event.replyEmbeds(nowPlayingEmbed.build()).queue();
