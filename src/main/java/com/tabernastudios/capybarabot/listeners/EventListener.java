@@ -66,7 +66,7 @@ public class EventListener extends ListenerAdapter {
                 } else {
                     LeaveChannelRunnable leaveRunnable = new LeaveChannelRunnable(botChannel);
                     leaveTask = scheduler.schedule(leaveRunnable, 5, TimeUnit.MINUTES);
-                    announceChannel.sendMessage(":waning: **`Irei me desconectar do canal de voz em 5 minutos pois não há ninguém nele! Para evitar isso, entre no canal de voz.`**").queue();
+                    announceChannel.sendMessage(":warning: **`> Irei me desconectar do canal de voz em 5 minutos pois não há ninguém nele! Para evitar isso, entre no canal de voz.`**").queue();
                     Main.logger.warning("leaveTask iniciada!");
                 }
         }
